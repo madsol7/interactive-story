@@ -32,50 +32,64 @@ print("Your adventure is about to begin!")
 # ==========================================
  #Create an inventory to store collected items
 inventory = []
- 
+
 # Define the Cell scene
 def cell():
     print("\nYou wake up in a dark castle cell.")
     print("You can see a door, a window and an old bed.")
- 
-# Create a variable to track whether the player has found the key
+
+    # Store the available choices
+    choices = ["door", "window", "bed"]
+
+    # Track whether the player has found the key
     has_key = False
- 
-# Repeat while the player has not found the key
+
+    # Repeat until the player finds the key
     while has_key == False:
- 
-# Ask the player what to investigate
-        choice = input("\nInvestigate the door, window or bed? "
-        ).lower()
- 
-        if choice == "door":
-            print("The door is locked.")
-            print("You need to find a key")
- 
+
+        # Display the remaining choices
+        print("\nYou can investigate:", choices)
+
+        choice = input("What would you like to investigate? ").lower()
+
+        if choice not in choices:
+            print("Invalid choice. Please choose an available option.")
+
+        elif choice == "door":
+            print("\nThe door is locked.")
+            print("You need to find a key.")
+
+            # Remove door from available choices
+            choices.remove("door")
+
         elif choice == "window":
-            print("The window is barred. You can't escape that way.")
- 
+            print("\nYou look through the window.")
+            print("The window is barred. You can't escape.")
+
+            # Remove window from available choices
+            choices.remove("window")
+
         elif choice == "bed":
-            print("You look underneath the bed.")
-            print("You find a small Iron Key")
- 
-# Add the key to the inventory
+            print("\nYou look underneath the bed.")
+            print("You find a small Iron Key!")
+
+            # Add key to inventory
             inventory.append("Iron Key")
- 
-# Update the variable to stop the loop
+
+            # Remove bed from available choices
+            choices.remove("bed")
+
+            # Update the variable
             has_key = True
- 
-        else:
-            print("Invalid choice. Please choose 'door', 'window', or 'bed'.")
- 
-# Code runs once the player has found the key.
-        print("\nYou unlock the cell door.")
-        print("You step out into the corridor.")
-        print(f"Your inventory: {inventory}")
- 
- 
+
+    # Continue the story after finding the key
+    print("\nYou unlock the cell door.")
+    print("You step out into the corridor.")
+    print(f"Your inventory: {inventory}")
+
 # Start the scene
 cell()
+
 # inventory = []
  
 # def cell():
