@@ -98,14 +98,12 @@ inventory = ["Iron Key"]
 print("You enter a long, dark corridor.")
 print("You notice an old wooden cabinet")
 
-choice = input("Do you want to open the cabinet? (yes/no) ").lower()
-")
+choice = input("Do you want to open the cabinet? (yes/no)")
 if choice == "yes":
     print("You open the cabinet \nInside you find a Rusty Dagger!")
     inventory.append("Rusty Dagger")
-
     print("You pick up the Dagger")
- elif choice == "no":
+elif choice == "no":
     print("You decide to leave the cabinet alone.")
 print(f"\nYour inventory: {inventory}")
 # cell()
@@ -134,8 +132,7 @@ print(f"\nYour inventory: {inventory}")
 import random
 # Define a function to describe an encounter
 def encounter(creature):
- 
-        # Different outcomes depending on the creature
+    # Different outcomes depending on the creature
     if creature == "Guard":
         print("The Guard draws their sword")
     elif creature == "Ghost":
@@ -149,13 +146,13 @@ def encounter(creature):
 def corridor():
     print("You walk down a dark castle corridor.")
     print("You hear a strange noise ahead...")
-     # Create a list of possible encounters
+    # Create a list of possible encounters
     creatures = ["Guard", "Ghost", "Sphinx"]
    
     # Randomly select a creature
     random_creature = random.choice(creatures)
  
-     # Pass the chosen creature into the encounter function
+    # Pass the chosen creature into the encounter function
     encounter(random_creature)
  
 # Start the scene
