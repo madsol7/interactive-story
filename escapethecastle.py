@@ -28,66 +28,71 @@ print("You hear footsteps approaching...")
 print("Your adventure is about to begin!")
 
 # ==========================================
-# ESCAPE THE CASTLE - SCENE 2: THE CORRIDOR
+# ESCAPE THE CASTLE - SCENE 1: THE CELL
 # ==========================================
+Inventory = []
+def cell():
+    global hasKey
+    # Introduce the scene to the player
+    print("You wake up in a dark castle cell.")
+    print("You can see a door, a window and an old bed")
 
-# Introduce the scene to the player
-print("You wake up in a dark castle cell.")
-print("You can see a door, a window and an old bed")
-# Ask the player what they want to investigate
-# .lower() converts their answer to lowercase
-choice = input("Do you want to investigate the door, window or bed? ").lower()
+    while hasKey == False
+    # Ask the player what they want to investigate
+    # .lower() converts their answer to lowercase
+    choice = input("Do you want to investigate the door, window or bed? ").lower()
 
-# Check whether the player chose the door
-if choice == "door":
-    print("You walk towards the door.")
-    print("You try the handle, but it is locked")
-# Check whether the player chose the window
-elif choice == "window":
-    print("You look through the window")
-    print("It is too small to escape through")
-# Check whether the player chose the bed
-elif choice == "bed":
-    print("You look under the bed")
-    print("You find a small iron key")
-    hasKey = True
-    inventory.append("Iron key")
-else:
-    print("You decide not to investigate")
+    # Check whether the player chose the door
+    if choice == "door":
+        print("You walk towards the door.")
+        print("You try the handle, but it is locked")
+    # Check whether the player chose the window
+    elif choice == "window":
+        print("You look through the window")
+        print("It is too small to escape through")
+    # Check whether the player chose the bed
+    elif choice == "bed":
+        print("You look under the bed")
+        print("You find a small iron key")
+        hasKey = True
+        inventory.append("Iron key")
+    else:
+        print("You decide not to investigate")
 
-# Introduce the scene
-print("You enter a long, dark corridor")
-print("You notice an old wooden cabinet")
-choice = input("Do you open the cabinet? yes/no: ").lower()
+    # Introduce the scene
+    print("You enter a long, dark corridor")
+    print("You notice an old wooden cabinet")
+    choice = input("Do you open the cabinet? yes/no: ").lower()
 
-if choice == "yes":
-    print("You open the cabinet")
-    print("Inside, you find a Rusty Dagger!")
-    inventory.append("Rusty Dagger")
-    print("You pick up the dagger")
-elif choice == "no":
-    print("You leave the cabinet closed.")
+    if choice == "yes":
+        print("You open the cabinet")
+        print("Inside, you find a Rusty Dagger!")
+        inventory.append("Rusty Dagger")
+        print("You pick up the dagger")
+    elif choice == "no":
+        print("You leave the cabinet closed.")
 
-print(f"\nYour Inventory: {inventory}")
-# ==========================================
-# ESCAPE THE CASTLE - SCENE 3: THE ROOM
-# ==========================================
-#guard and ghost is an argument
-def encounter(creature):
-    print("You hear footsteps approaching")
-    print(f"A {creature} appears!!")
-    print("prepare yourself")
-    if creature == "guard":
-        print("The guard draws their sword")
-    elif creature == "ghost":
-        print("The ghost floats towards you")
-    elif creature == "drauger":
-        print("The drauger wakes up and slowly walks towards you")
-    
+    print(f"\nYour Inventory: {inventory}")
+    cell()
+    # ==========================================
+    # ESCAPE THE CASTLE - SCENE 3: THE ROOM
+    # ==========================================
+    #guard and ghost is an argument
+    def encounter(creature):
+        print("You hear footsteps approaching")
+        print(f"A {creature} appears!!")
+        print("prepare yourself")
+        if creature == "guard":
+            print("The guard draws their sword")
+        elif creature == "ghost":
+            print("The ghost floats towards you")
+        elif creature == "drauger":
+            print("The drauger wakes up and slowly walks towards you")
+        
 
-encounter("guard")
-encounter("ghost")
-encounter("drauger")
+    encounter("guard")
+    encounter("ghost")
+    encounter("drauger")
 # ==========================================
 # ESCAPE THE CASTLE - SCENE 4: CORRIDOR ENCOUNTER
 # ==========================================
