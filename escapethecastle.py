@@ -90,47 +90,27 @@ def cell():
 # Start the scene
 cell()
 
-# inventory = []
- 
-# def cell():
-#     global has_key
-#     # Introduce the scene to the player
-#     print("You wake up in a dark castle cell.")
-#     print("You can see a door, a window and an old bed")
- 
-#     while has_key == False:
- 
-#         # Ask the player what they want to investigate
-#         # .lower() converts their answer to lowercase
-#         choice = input("Do you want to investigate the door, window or bed?: ").lower()
- 
-#         # Check whether the player chose the door
-#         if choice == "door":
-#             print("You walk towards the door.")
-#             print("You try the handle, but is it locked.")
- 
-#         # Check whether the player chose the window
-#         elif choice == "window":
-#             print("You look through the window.")
-#             print("It is too small to escape through")
- 
-#         # Check whether the player chose the bed
-#         elif choice == "bed":
-#             print("You look under the bed")
-#             print("You find a small Iron Key")
-#             inventory.append("Iron Key")
-#             has_key = True
-#         else:
-#             print("You decide not to investigate")
-   
-#     print("\nYou unlock the cell door.")
-#     print("You step out into the corridor.")
-#print(f"Your inventory: {inventory}")
- 
- 
+#==========================================
+# ESCAPE THE CASTLE - SCENE 2: THE CORRIDOR
+#==========================================
+inventory = ["Iron Key"] 
+#Introduce the scene
+print("You enter a long, dark corridor.")
+print("You notice an old wooden cabinet")
+
+choice = input("Do you want to open the cabinet? (yes/no) ").lower()
+")
+if choice == "yes":
+    print("You open the cabinet \nInside you find a Rusty Dagger!")
+    inventory.append("Rusty Dagger")
+
+    print("You pick up the Dagger")
+ elif choice == "no":
+    print("You decide to leave the cabinet alone.")
+print(f"\nYour inventory: {inventory}")
 # cell()
 #     # ==========================================
-#     # ESCAPE THE CASTLE - SCENE 2: THE ROOM
+#     # ESCAPE THE CASTLE - SCENE 3: THE ROOM
 #     # ==========================================
 #     #guard and ghost is an argument
 # def encounter(creature):
@@ -148,7 +128,7 @@ cell()
 # encounter("ghost")
 # encounter("drauger")
 # ==========================================
-# ESCAPE THE CASTLE - SCENE 4: CORRIDOR ENCOUNTER
+# ESCAPE THE CASTLE - SCENE 3: CORRIDOR ENCOUNTER
 # ==========================================
  
 import random
