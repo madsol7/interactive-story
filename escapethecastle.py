@@ -98,7 +98,7 @@ inventory = ["Iron Key"]
 print("You enter a long, dark corridor.")
 print("You notice an old wooden cabinet")
 
-choice = input("Do you want to open the cabinet? (yes/no)")
+choice = input("Do you want to open the cabinet?: (yes/no)")
 if choice == "yes":
     print("You open the cabinet \nInside you find a Rusty Dagger!")
     inventory.append("Rusty Dagger")
