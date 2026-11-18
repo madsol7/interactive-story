@@ -1,92 +1,397 @@
-
-# import streamlit as st
-
-# STEP 1 — Initialise game values once per browser session.
-# Streamlit reruns the script when the player interacts with a widget.
-# # These values need to survive those reruns.
-# #python -m streamlit run app.py
-# if "playerName" not in st.session_state:
-#     st.session_state.playerName = ""
-
-# if "health" not in st.session_state:
-#     st.session_state.health = 100
-
-# if "inventory" not in st.session_state:
-#     st.session_state.inventory = []
-
-# if "scene" not in st.session_state:
-#     st.session_state.scene = "start"
-
-# if "result" not in st.session_state:
-#     st.session_state.result = ""
-
-# # STEP 2 — Show the game's title and the information the character carries
-
-# st.title("Escape the castle")
-
-# if st.session_state.playerName:
-#     st.write(f"Player: {st.session_state.playerName}")
-#     st.write(f"Health: {st.session_state.health}")
-#     st.write(f"Inventory: {st.session_state.inventory}")
-
-# # STEP 3 — Start screen: use a text input and button.
-# # The name is saved to session state so it is available in later scenes.
-
-# if st.session_state.scene == "start":
-#     st.subheader("Create your character")
-
-#     st.session_state.playerName = st.text_input("What is your name?")
-
-#     if st.button("Start Adventure"):
-#         st.session_state.scene = "cell"
-#         st.rerun()
-
-# # STEP 4 — Cell scene
-# elif st.session_state.scene == "cell":
-#     st.subheader("The Cell")
-#     st.write("You wake up in a dark castle cell.")
-#     st.write("You can see a door, a window, and an old bed.")
+import os
+import streamlit as st
+from dotenv import load_dotenv
+from google import genai
  
-#     if st.button("Investigate the door"):
-#         st.session_state.result = "The door is locked, you need a key."
-#     if st.button("Investigate the window"):
-#             st.session_state.result = "The window is too small for you to escape through."
-#     if st.button("Investigate the bed"):
-#         if "Iron Key" not in st.session_state.inventory:
-#             st.session_state.inventory.append("Iron Key")
-#             st.session_state.result = "You found an Iron Key!"
-#         else:
-#             st.session_state.result = "There is nothing else under the bed"
+load_dotenv()
+api_key = os.getenv("GEMINI_API_KEY")
  
-#     if st.session_state.result:
-#         st.info(st.session_state.result)
+client = genai.Client(api_key=api_key) if api_key else None
+ 
+MODEL_NAME = "gemini-3.5-flash-lite"
+# ================================================================
+# 1. PAGE SETUP — SAME APPROACH AS THE FINAL APP
+# ================================================================
+# page_icon uses the Unicode castle character, not an image file.
+# Keep this before other Streamlit display calls.
+ 
+st.set_page_config(page_title="Escape the Castle", page_icon="🏰", layout="centered")
+st.title("🏰 Escape the Castle")
+ 
+# ================================================================
+# 2. GAME SETUP — INITIALISE VALUES ONCE & STRUCTURED PROMPT
+# ================================================================
+# Session state remembers values when Streamlit reruns the script.
 
-# # STEP 5 - Unlock progress using a condition based on inventory.
-#     if "Iron Key" in st.session_state.inventory:
-#         if st.button("Unlock the door and continue"):
-#             st.session_state.scene = "corridor"
-#             st.session_state.result = ""
-#             st.rerun()
-# # STEP 6 — Corridor scene: use the SAME inventory as in the Cell.
-# elif st.session_state.scene == "corridor":
+if "game_started" not in st.session_state:
+    st.session_state.game_started = False
+ 
+def start_game(name):
+    """Set the same starting values and seven-room route as the final app."""
+    st.session_state.game_started = True
+    st.session_state.player_name = name
+    st.session_state.health = 5
+    st.session_state.max_health = 5
+    st.session_state.inventory = ["Torch"]
+    st.session_state.rooms = [ "cell", "corridor", "crypt", "library",
+        "guard_room", "dungeon", "castle_gate"]
+    st.session_state.room_number = 0
+    st.session_state.result_type = ""
+    st.session_state.result_message = ""
+    st.session_state.result_value = ""
+    st.session_state.action_complete = False
 
-#     st.subheader("The Corridor")
-#     st.write("You find yourself in a long, dimly lit corridor.")
-#     st.write("There is a cabinet against the wall.")
+def restart_game():
+    st.session_state.clear()
+    st.rerun()
+ 
+def get_current_room():
+    """Use the room number to find the name of the current room."""
+    return st.session_state.rooms[st.session_state.room_number]
+ 
+def continue_game():
+    """Clear the last action and move to the next room."""
+    st.session_state.result_type = ""
+    st.session_state.result_message = ""
+    st.session_state.result_value = ""
+    st.session_state.action_complete = False
+    st.session_state.room_number += 1
+    st.rerun()
+def generate_story(room, action, outcome, fallback_message):
+    if client is None:
+        return fallback_message
+    inventory_text = ",".join(st.session_state.inventory)
+    prompt = f"""
+You are the storyteller for a dark fantasy
+adventure game called Escape the Castle.
+ 
+Player: {st.session_state.player_name}
+Room: {room}
+Health: {st.session_state.health}/{st.session_state.max_health}
+Inventory: {inventory_text}
+ 
+Action:
+{action}
+ 
+Outcome:
+{outcome}
+ 
+Describe what happens in 30-50 words.
+ 
+Use second person.
+Use atmospheric dark fantasy language.
+Do not change the outcome.
+Do not change health or inventory.
+Do not introduce new choices.
+"""
+ 
+    try:
+        interaction = client.interactions.create(
+            model="gemini-3.5-flash-lite",
+            input=prompt,
+            generation_config={"thinking_level": "minimal"}
+        )
+        if interaction.output_text:
+            return interaction.output_text
+        return fallback_message
+    except Exception as error:
+        st.error(f"Gemini error: {error}")
+        return fallback_message
+ 
+# ================================================================
+# 3. REUSABLE DISPLAY FUNCTIONS — KEEP EVERY ROOM CONSISTENT
+# ================================================================
+#Showing the Room
+def show_room(title, description):
+    """Display a room heading and its description."""
+    st.header(title)
+    st.write(description)
+ 
+def show_player_info():
+    st.subheader(f"🧑 {st.session_state.player_name} ")
+    left, right = st.columns(2)
+    with left:
+        st.write(f"❤️ Health: {st.session_state.health} / {st.session_state.max_health}")
+    with right:
+        st.write(f"🎒 Inventory: {', '.join(st.session_state.inventory)}")  
+    st.caption(
+        f"Room {st.session_state.room_number + 1}"
+        f"of {len(st.session_state.rooms)}"
+    )
+    st.divider()
 
-#     if st.button("Open the cabinet"):
-#         if "Rusty Dagger" not in st.session_state.inventory:
-#             st.session_state.inventory.append("Rusty Dagger")
-#             st.session_state.result = "You found a Rusty Dagger!"
+def set_result(result_type, message, value="Apple"):
+    st.session_state.result_type = result_type
+    st.session_state.result_message = message
+    st.session_state.result_value = value
+    st.session_state.action_complete = True
+    st.rerun()
+ 
+def show_result():
+    kind = st.session_state.result_type
+    message = st.session_state.result_message
+    if kind == "item":
+        st.success(f"🎒 NEW ITEM: {st.session_state.result_value}")
+        st.write(message)
+    elif kind == "success":
+        st.success(message)
+    else:
+        st.info(message)
+ 
+def add_item(item):
+    if item not in st.session_state.inventory:
+        st.session_state.inventory.append(item)
+ 
+def show_continue_button(text = "Continue"):
+    if st.button(text):
+        continue_game()
+ 
+ 
+# ================================================================
+# 4. START SCREEN — NAME INPUT FROM DAY 1
+# ================================================================
+def set_result(result_type, message, value="Apple"):
+    st.session_state.result_type = result_type
+    st.session_state.result_message = message
+    st.session_state.result_value = value
+    st.session_state.action_complete = True
+    st.rerun()
+ 
+def show_result():
+    kind = st.session_state.result_type
+    message = st.session_state.result_message
+    if kind == "item":
+        st.success(f"🎒 NEW ITEM: {st.session_state.result_value}")
+        st.write(message)
+    elif kind == "success":
+        st.success(message)
+    else:
+        st.info(message)
+ 
+def add_item(item):
+    if item not in st.session_state.inventory:
+        st.session_state.inventory.append(item)
+ 
+def show_continue_button(text = "Continue"):
+    if st.button(text):
+        continue_game()
+ 
+ 
+# ================================================================
+# 4. START SCREEN — NAME INPUT FROM DAY 1
+# ================================================================
+def set_result(result_type, message, value="Apple"):
+    st.session_state.result_type = result_type
+    st.session_state.result_message = message
+    st.session_state.result_value = value
+    st.session_state.action_complete = True
+    st.rerun()
+ 
+def show_result():
+    kind = st.session_state.result_type
+    message = st.session_state.result_message
+    if kind == "item":
+        st.success(f"🎒 NEW ITEM: {st.session_state.result_value}")
+        st.write(message)
+    elif kind == "success":
+        st.success(message)
+    else:
+        st.info(message)
+ 
+def add_item(item):
+    if item not in st.session_state.inventory:
+        st.session_state.inventory.append(item)
+ 
+def show_continue_button(text = "Continue"):
+    if st.button(text):
+        continue_game()
+ 
+ 
+# ================================================================
+# 4. START SCREEN — NAME INPUT FROM DAY 1
+# ================================================================
+if not st.session_state.game_started:
+    st.write("You wake beneath an ancient castle. Your goal is to escape.")
+    name = st.text_input("What is your name?")
+ 
+    if st.button("Enter the Castle"):
+        if name.strip():
+            start_game(name)
+            st.rerun()
+        else:
+            st.warning("Enter your name first before starting ")
 
-#         else:
-#             st.session_state.result = "The cabinet is empty."
-#         if st.button("Leave the cabinet"):
-#             st.session_state.result = "You leave the cabinet and continue down the corridor."
+else:
+    # Show the same player information on every room.
+    show_player_info()
+    room = get_current_room()
+# ============================================================
+    # ROOM 1 — CELL (MODEL SIMPLE CONTINUE NAVIGATION)
+    # ============================================================
+    if room == "cell":
+        show_room("🔒 The Cell", " You wake on a cold stone floor. The iron door creaks open.")
+        show_continue_button("🚪 Leave the cell")
+# ============================================================
+    # ROOM 2 — CORRIDOR (MODEL RESULT -> CONTINUE)
+    # ============================================================
+    elif room == "corridor":
+        show_room("🕯️ The Corridor", "A wooden cabinet stands beside the staircase.")
+        if not st.session_state.action_complete:
+            left, right = st.columns(2)
+            with left:
+                if st.button("🔎 Search the cabinet"):
+                    add_item("Rusty Dagger")
+                    set_result("item", "You find a Rusty Dagger inside the cabinet.", "Rusty Dagger")
+            with right:
+                if st.button("➡️ Ignore it"):
+                    set_result("story", "You leave the cabinet and walk onwards.")
+        else:
+            show_result()
+            show_continue_button()
+ # ============================================================
+    # ROOM 3 — CRYPT
+    # ============================================================
+   
+    #show_room("⚰️ The Crypt", "A metal object glints beside a stone coffin.")
+    #Player should be given the choice to investigate the coffin or leave
+    #If they do investigate they should obtain an Iron Key
+ 
+ 
+    
+# ============================================================
+# ROOM 3 — CRYPT (LEARNERS REPEAT THE PATTERN)
+# ============================================================
+    elif room == "crypt":
+        show_room("⚰️ The Crypt", "A metal object glints beside a stone coffin.")
+        if not st.session_state.action_complete:
+            left, right = st.columns(2)
+            with left:
+                if st.button("🔎 Investigate"):
+                    add_item("Iron Key")
+                    set_result("item", "You safely pick up an Iron Key.", "Iron Key")
+            with right:
+                if st.button("🚪 Leave the crypt"):
+                    set_result("story", "You leave the crypt undisturbed.")
+        else:
+            show_result()
+            show_continue_button()
+ 
+    # ============================================================
+    # ROOM 4 — LIBRARY (REPEAT THE PATTERN)
+    # ============================================================
+    elif room == "library":
+        show_room("📚 The Forgotten Library", "A strange green light shines from an old book.")
+        if not st.session_state.action_complete:
+            left, right = st.columns(2)
+            with left:
+                if st.button("📖 Read the book"):
+                    set_result("story", "The pages glow with mysterious symbols.")
+            with right:
+                if st.button("🚪 Leave it alone"):
+                    set_result("story", "You decide not to touch the book.")
+        else:
+            show_result()
+            show_continue_button()
+#use the guard room as the template
+#check to see if Iron Key held in inventory
+#if key in inventory, show button to unlock the gate and escape
+#if no key in inventiory show button to climb the wall and escape
+# ============================================================
+# ROOM 5 — GUARD ROOM (CHOICES WITHOUT DICE YET)
+# ============================================================
+    elif room == "guard_room":
+        show_room("⚔️ The Guard Room", "A ghostly knight blocks the doorway.")
+        if "Rusty Dagger" in st.session_state.inventory:
+            st.info("⚔️ You are carrying a Rusty Dagger.")
+        if not st.session_state.action_complete:
+            left, right = st.columns(2)
+            with left:
+                if st.button("⚔️ Fight the knight"):
+                    outcome = "The player defeats the knight and can continue."
+                    story = generate_story(
+                        "The Guard Room", "fight the ghostly knight", outcome, "You dodge the knight's sword. The armour crashes to the floor."
+                    )
+                    set_result("success", story)
+                    st.rerun()
+            with right:
+                if st.button("🏃 Run past"):
+                    outcome = "The player escapes past the knight without injury."
+                    story = generate_story(
+                        "The Guard Room", "running past the ghostly knight", outcome, "You sprint past the knight and escape through the doorway."
+                    )
+                    set_result("success", story)
+                    st.rerun()
+        else:
+            show_result()
+            show_continue_button()
 
-#         if st.session_state.result:
-#             st.info(st.session_state.result)
-#         st.write("More of the castle lies ahead.")
+# ============================================================
+# ROOM 6 — DUNGEON (INVENTORY PERSISTS ACROSS ROOMS)
+# ============================================================
+ 
+    elif room == "dungeon":
+        show_room("⛓️ The Dungeon", "A bottle of red liquid lies among abandoned belongings.")
+        if not st.session_state.action_complete:
+            left, right = st.columns(2)
+            with left:
+                if st.button("🧪 Take the bottle"):
+                    add_item("Healing Potion")
+                    set_result("item", "You find a Healing Potion.", "Healing Potion")
+            with right:
+                if st.button("➡️ Leave it"):
+                    set_result("story", "You leave the bottle behind.")
+        else:
+            show_result()
+            show_continue_button()
+ 
+# ============================================================
+# ROOM 7 — CASTLE GATE (BRANCH BASED ON INVENTORY)
+# # ============================================================
+    elif room == "castle_gate":
+        show_room("🌙 The Castle Gate", "You reach the iron gate. Freedom is beyond it.")
+        if not st.session_state.action_complete:
+            if "Iron Key" in st.session_state.inventory:
+                st.success("🔑 You have the Iron Key.")
+                if st.button("🔑 Unlock the gate"):
+                    set_result("success", "The gate opens. You escape the castle!")
+            else:
+                st.warning("🔒 The gate is locked. You do not have the key.")
+                if st.button("🧗 Climb the wall"):
+                    set_result("success", "You climb over the wall and escape!")
+        else:
+            show_result()
+            st.header("🏆 YOU ESCAPED THE CASTLE!")
+            st.balloons()
+ 
+        st.divider()
+        if st.button("🔄 Play Again"):
+            restart_game()
+ 
 
-#         if st.session_state.name:
-#             st.write("Current inventory: {st.session_state.inventory}")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
