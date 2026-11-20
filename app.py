@@ -1,5 +1,6 @@
 import os
 import streamlit as st
+import random
 from dotenv import load_dotenv
 from google import genai
  
@@ -9,12 +10,12 @@ api_key = os.getenv("GEMINI_API_KEY")
 client = genai.Client(api_key=api_key) if api_key else None
  
 MODEL_NAME = "gemini-3.5-flash-lite"
+
 # ================================================================
 # 1. PAGE SETUP — SAME APPROACH AS THE FINAL APP
 # ================================================================
 # page_icon uses the Unicode castle character, not an image file.
 # Keep this before other Streamlit display calls.
- 
 st.set_page_config(page_title="Escape the Castle", page_icon="🏰", layout="centered")
 st.title("🏰 Escape the Castle")
  
@@ -22,7 +23,6 @@ st.title("🏰 Escape the Castle")
 # 2. GAME SETUP — INITIALISE VALUES ONCE & STRUCTURED PROMPT
 # ================================================================
 # Session state remembers values when Streamlit reruns the script.
-
 if "game_started" not in st.session_state:
     st.session_state.game_started = False
  
@@ -49,6 +49,12 @@ def get_current_room():
     """Use the room number to find the name of the current room."""
     return st.session_state.rooms[st.session_state.room_number]
  
+
+
+
+
+
+
 def continue_game():
     """Clear the last action and move to the next room."""
     st.session_state.result_type = ""
@@ -57,6 +63,29 @@ def continue_game():
     st.session_state.action_complete = False
     st.session_state.room_number += 1
     st.rerun()
+
+def add_item(item):
+    if item not in st.session_state.inventory:
+                    st.session_state.inventory.append(item)
+ 
+def has_item(item):
+     return item in st.session_state.inventory
+ 
+def remove_item(item):
+     if item in st.session_state.inventory:
+                         st.session_state.inventory.remove(item)
+
+def take_damage(amount):
+    st.session_state.health = st.session_state.health - amount
+    if st.session_state.health < 0:
+        st.session_state.health = 0
+def heal_player(amount):
+    old_health = st.session_state.health
+    st.session_state.health = min(st.session_state.max_health, st.session_state.health + amount)
+    return st.session_state.health - old_health
+
+
+
 def generate_story(room, action, outcome, fallback_message):
     if client is None:
         return fallback_message
@@ -97,6 +126,23 @@ Do not introduce new choices.
     except Exception as error:
         st.error(f"Gemini error: {error}")
         return fallback_message
+
+def roll_dice():
+    return random.randint(1, 6)
+ 
+def chance_encounter(button_text, room, action, success_number, success_outcome, success_fallback, failure_outcome, failure_fallback, damage, bonus_item=""):
+    if st.button(button_text):
+        roll = roll_dice()
+        if bonus_item != "" and has_item(bonus_item):
+            roll = roll + 2
+        if roll >= success_number:
+            story = generate_story(room, action, success_outcome, success_fallback)
+            set_result("success", story)
+        else:
+            take_damage(damage)
+            story = generate_story(room, action, failure_outcome, failure_fallback)
+            set_result("damage", story, damage)
+        st.rerun
  
 # ================================================================
 # 3. REUSABLE DISPLAY FUNCTIONS — KEEP EVERY ROOM CONSISTENT
@@ -128,19 +174,23 @@ def set_result(result_type, message, value="Apple"):
     st.rerun()
  
 def show_result():
+    # [UPDATE] Replace yesterday's show_result() with this whole function.
     kind = st.session_state.result_type
-    message = st.session_state.result_message
-    if kind == "item":
-        st.success(f"🎒 NEW ITEM: {st.session_state.result_value}")
-        st.write(message)
-    elif kind == "success":
-        st.success(message)
-    else:
-        st.info(message)
+    value = st.session_state.result_value
  
-def add_item(item):
-    if item not in st.session_state.inventory:
-        st.session_state.inventory.append(item)
+    if kind == "item":
+        st.success(f"🎒 NEW ITEM: {value}")
+    elif kind == "damage":
+        st.error(f"💔 DAMAGE: You lose {value} health.")
+    elif kind == "heal":
+        st.success(f"💚 HEALED: You recover {value} health.")
+    elif kind == "success":
+        st.success("✅ Success!")
+    else:
+        st.info("The journey continues...")
+ 
+    st.write(st.session_state.result_message)
+ 
  
 def show_continue_button(text = "Continue"):
     if st.button(text):
@@ -225,7 +275,14 @@ else:
     # Show the same player information on every room.
     show_player_info()
     room = get_current_room()
-# ============================================================
+
+if st.session_state.health <= 0:
+    show_room("💀 Game Over", "Your strength gives out. The castle has claimed another victim.")
+    st.error("You did not escape the castle")
+    if st.button("🔄 Try Again"):
+        restart_game()
+    st.stop()
+#============================================================
     # ROOM 1 — CELL (MODEL SIMPLE CONTINUE NAVIGATION)
     # ============================================================
     if room == "cell":
